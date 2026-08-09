@@ -4,14 +4,14 @@ import org.springframework.stereotype.Service;
 
 import com.data.api.dto.request.PipelineConfigRequest;
 import com.data.api.model.PipelineConfig;
-import com.data.api.repository.PipelineRepository;
+import com.data.api.repository.PipelineConfigRepository;
 
 @Service
-public class PipelineService {
+public class PipelineConfigService {
 
-    private final PipelineRepository pipelineRepository;
+    private final PipelineConfigRepository pipelineRepository;
 
-    public PipelineService(PipelineRepository pipelineRepository) {
+    public PipelineConfigService(PipelineConfigRepository pipelineRepository) {
         this.pipelineRepository = pipelineRepository;
     }
 
