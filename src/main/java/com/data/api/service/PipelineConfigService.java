@@ -1,5 +1,7 @@
 package com.data.api.service;
 
+import java.util.UUID;
+
 import org.springframework.stereotype.Service;
 
 import com.data.api.dto.request.PipelineConfigRequest;
@@ -24,6 +26,11 @@ public class PipelineConfigService {
         pipelineConfig.setCreatedBy("developer"); // This should ideally come from the authenticated user context
         pipelineConfig.setPriority(1); // Default priority, can be modified later
         return pipelineRepository.save(pipelineConfig);
+    }
+
+    public PipelineConfig getPipelineConfig(UUID pipelineId) {
+        return pipelineRepository.findById(pipelineId)
+                .orElseThrow(() -> new RuntimeException("Pipeline configuration not found for ID: " + pipelineId));
     }
     
 }
