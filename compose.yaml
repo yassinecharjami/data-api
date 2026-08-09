@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: 'postgres:latest'
+    image: 'postgres:16'
     environment:
       - 'POSTGRES_DB=mydatabase'
       - 'POSTGRES_PASSWORD=secret'
@@ -9,20 +9,96 @@ services:
       - '5432:5432'
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped  
+
+  kafka:
+    image: 'apache/kafka:latest'
+    environment:
+      - KAFKA_NODE_ID=0
+      - KAFKA_PROCESS_ROLES=broker,controller
+      # On crée 2 réseaux : INTERNAL (pour MinIO) et EXTERNAL (pour Spring Boot)
+      - KAFKA_LISTENERS=INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      - KAFKA_ADVERTISED_LISTENERS=INTERNAL://kafka:29092,EXTERNAL://localhost:9092
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      - KAFKA_INTER_BROKER_LISTENER_NAME=INTERNAL
+      - KAFKA_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
+      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
+    ports:
+      - '9092:9092' # On expose uniquement le port externe pour Spring Boot
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    restart: unless-stopped
 
   minio:
     image: 'minio/minio:latest'
     environment:
       - 'MINIO_ROOT_USER=access'
       - 'MINIO_ROOT_PASSWORD=minioSecret123'
+      # -- Configuration Kafka --
+      - 'MINIO_NOTIFY_KAFKA_ENABLE_1=on'
+      - 'MINIO_NOTIFY_KAFKA_BROKERS_1=kafka:29092' # MinIO utilise le canal interne
+      - 'MINIO_NOTIFY_KAFKA_TOPIC_1=minio-events'
+      - 'MINIO_NOTIFY_KAFKA_FORMAT_1=namespace'
+      # La ligne FORMAT a été supprimée pour forcer le mode "namespace" (S3 Events)
     command: server /data --console-address ":9001"
     ports:
       - '9000:9000'
       - '9001:9001'
     volumes:
       - minio-data:/data
+    depends_on:
+      - kafka  
+    restart: unless-stopped
+
+  minio-setup:
+    image: 'minio/mc:latest'
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      echo 'Waiting for MinIO...';
+      sleep 5;
+      mc alias set myminio http://minio:9000 access minioSecret123;
+      mc mb myminio/ingest-data --ignore-existing;
+      
+      echo 'Nettoyage des anciens événements...';
+      mc event rm myminio/ingest-data arn:minio:sqs::1:kafka 2>/dev/null || true;
+      
+      echo 'Ajout du nouvel événement Kafka...';
+      mc event add myminio/ingest-data arn:minio:sqs::1:kafka --event put;
+      
+      echo 'MinIO setup completed.';
+      "
+
+  prometheus:
+    image: 'prom/prometheus:latest'
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    ports:
+      - '9090:9090'
+    restart: unless-stopped
+
+  grafana:
+    image: 'grafana/grafana:latest'
+    environment:
+      - 'GF_SECURITY_ADMIN_USER=admin'
+      - 'GF_SECURITY_ADMIN_PASSWORD=admin'
+    ports:
+      - '3000:3000'
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus  
     restart: unless-stopped
 
 volumes:
   minio-data:
   postgres-data:
+  kafka-data:
+  prometheus-data:
+  grafana-data:
