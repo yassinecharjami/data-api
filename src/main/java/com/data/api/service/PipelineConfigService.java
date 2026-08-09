@@ -1,7 +1,5 @@
 package com.data.api.service;
 
-import java.util.UUID;
-
 import org.springframework.stereotype.Service;
 
 import com.data.api.dto.request.PipelineConfigRequest;
@@ -28,7 +26,7 @@ public class PipelineConfigService {
         return pipelineRepository.save(pipelineConfig);
     }
 
-    public PipelineConfig getPipelineConfig(UUID pipelineId) {
+    public PipelineConfig getPipelineConfig(Long pipelineId) {
         return pipelineRepository.findById(pipelineId)
                 .orElseThrow(() -> new RuntimeException("Pipeline configuration not found for ID: " + pipelineId));
     }

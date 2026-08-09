@@ -27,7 +27,7 @@ public class PipelineRunService {
     }
 
     @Transactional
-    public UploadResponse initUpload(UUID pipelineId) {
+    public UploadResponse initUpload(Long pipelineId) {
         
         PipelineConfig config = configRepository.findById(pipelineId)
                 .orElseThrow(() -> new RuntimeException("Pipeline config not found for the given ID"));

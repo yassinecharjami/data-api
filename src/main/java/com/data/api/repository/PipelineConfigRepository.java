@@ -4,10 +4,9 @@ import org.springframework.stereotype.Repository;
 
 import com.data.api.model.PipelineConfig;
 
-import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 @Repository
-public interface PipelineConfigRepository extends JpaRepository<PipelineConfig, UUID> {
+public interface PipelineConfigRepository extends JpaRepository<PipelineConfig, Long> {
     
 }
