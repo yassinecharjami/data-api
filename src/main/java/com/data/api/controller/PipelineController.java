@@ -75,7 +75,12 @@ public class PipelineController {
 
     try {
     HttpHeaders headers = new HttpHeaders();
-    headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+    String contentType = file.getContentType();
+    if (contentType == null || contentType.isEmpty()) {
+    contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE;
+    }
+
+    headers.setContentType(MediaType.parseMediaType(contentType));
     headers.setContentLength(file.getSize());
 
     HttpEntity<byte[]> requestEntity;
